@@ -1,79 +1,91 @@
-from LDAPMethods import _initAD, _getAdGroups, _getAdUsers
-from WSPropertyVLAB import StatusVLAB, ValuesXCP, ValueXCP, ValuesAD
-from XCPMethods import _connectXCP, _getNetworks, _deleteVM, _findVM, _createVM, _getTemplates
-from XVPMethods import _connectDB, _deleteRightsXVP, _createRightsXVP
+#-*- encoding: utf-8; -*-
+from LDAPMethods2 import LDAPMethods
+from WSPropertyVLAB import StatusVLAB, ValuesXCP, ValueXCP, ValuesAD, SingleValueXCP
+from XCPMethods2 import XCPMethods
+from XVPMethods2 import XVPMethods
 import xcpconf
 
 __author__ = 'artzab'
 
-def _createLab(xapi, sqlCur, configLab, res):
+def _createLab(xcp, xvp, configLab):
+
     for strUser in configLab.Users:
-        for cfgVM in configLab.VMs:
-            strVM = strUser + cfgVM.Suffix
+
+        if configLab.NameLab not in xcp.configsLabs:
+            xcp.messages("ERROR", "Lab name '%s' not found" % configLab.NameLab)
+            xcp.logging.StatusOK = False
+            return
+
+        poolName = xcp.GetPoolName()
+
+        for vm in xcp.configsLabs[configLab.NameLab]['vms']:
+            strVM = strUser.split("@")[0] + "." + vm
 
             ##Check vm to exist
-            if config['debug']:
-                res.Messages.append("DEBUG: Check vm: %s to exist" % strVM)
-            objVMs = _findVM(xapi, strVM)
+            xcp.messages("DEBUG", "Check vm: %s to exist" % strVM)
+            objVMs = xcp.FindVM(strVM)
             if objVMs:
-                res.Messages.append("WARN: VM: %s found. This VM not create!!!" % strVM)
-                _res = _createRightsXVP(sqlCur, strUser, xapi.VM.get_uuid(objVMs[0]), configLab, res)
+                xcp.messages("WARN", "VM: %s found. This VM not create!!!" % strVM)
+                _res = xvp.CreateRightsXVP(strUser, xcp.xapi.VM.get_uuid(objVMs[0]), poolName)
                 if not _res:
-                    res.Messages.append(
-                        "ERROR: Rights for vm: %s on the user: %s Not create!!!" % (strVM, strUser))
+                    xcp.messages(
+                        "ERROR", "Rights for vm: %s on the user: %s Not create!!!" % (strVM, strUser))
 
                 continue
 
+
             ##Create VM
-            if config['debug']:
-                res.Messages.append("DEBUG: Cretate vm: %s" % strVM)
-            ref = _createVM(xapi, strUser, cfgVM, res)
+            xcp.messages("DEBUG", "Cretate vm: %s" % strVM)
+            ref = xcp.CreateVM(strUser, vm, configLab.NameLab)
             if not ref:
-                res.Messages.append("ERROR: VM: %s Not create!!!" % strVM)
-                res.StatusOK = False
+                xcp.messages("ERROR", "VM: %s Not create!!!" % strVM)
+                xcp.logging.StatusOK = False
                 return
-            if config['debug']:
-                res.Messages.append("DEBUG: VM: %s Created!" % strVM)
-                res.Messages.append("DEBUG: Create rights for vm: %s" % strVM)
+            xcp.messages("DEBUG", "VM: %s Created!" % strVM)
+            xcp.messages("DEBUG", "Create rights for vm: %s" % strVM)
 
             ##Create Rights XVP
-            _res = _createRightsXVP(sqlCur, strUser, xapi.VM.get_uuid(ref), configLab, res)
+            _res = xvp.CreateRightsXVP(strUser, xcp.xapi.VM.get_uuid(ref), poolName)
             if not _res:
-                res.Messages.append("ERROR: Rights for vm: %s on the user: %s Not create!!!" % (strVM, strUser))
-                res.StatusOK = False
+                xcp.messages("ERROR", "Rights for vm: %s on the user: %s Not create!!!" % (strVM, strUser))
+                xcp.DeleteVM(strVM)
+                xcp.logging.StatusOK = False
                 return
-            if config['debug']:
-                res.Messages.append("DEBUG: Rights for vm: %s on the user: %s Created!!!" % (strVM, strUser))
+            xcp.messages("DEBUG", "Rights for vm: %s on the user: %s Created!!!" % (strVM, strUser))
 
     return
 
-def _deleteLab(xapi, sqlCur, configLab, res):
+def _deleteLab(xcp, xvp, configLab):
     ##
     ## Delete lab
     ##
 
     for strUser in configLab.Users:
-        for cfgVM in configLab.VMs:
-            strVM = strUser + cfgVM.Suffix
-            if config['debug']:
-                res.Messages.append("DEBUG: Check vm: %s to exist" % strVM)
-            objVMs = _findVM(xapi, strUser + cfgVM.Suffix)
+
+        if configLab.NameLab not in xcp.configsLabs:
+            xcp.messages("ERROR", "Lab name '%s' not found" % configLab.NameLab)
+            xcp.logging.StatusOK = False
+            return
+
+        poolName = xcp.GetPoolName()
+
+        for vm in xcp.configsLabs[configLab.NameLab]['vms']:
+            strVM = strUser.split("@")[0] + "." + vm
+            xcp.messages("DEBUG", "Check vm: %s to exist" % strVM)
+            objVMs = xcp.FindVM(strVM)
             if not objVMs:
-                res.Messages.append("WARN: VM: %s not found. This VM not deleted!!!" % strVM)
+                xcp.messages("WARN", "VM: %s not found. This VM not deleted!!!" % strVM)
                 continue
-            if config['debug']:
-                res.Messages.append("DEBUG: Delete vm: %s" % strVM)
-            uuid = xapi.VM.get_uuid(objVMs[0])
-            _deleteVM(xapi, strVM, res)
-            if config['debug']:
-                res.Messages.append("DEBUG: VM: %s Deleted!" % strVM)
-                res.Messages.append("DEBUG: Delete rights for vm: %s" % strVM)
-            _res = _deleteRightsXVP(sqlCur, strUser, uuid, configLab, res)
+            xcp.messages("DEBUG", "Delete vm: %s" % strVM)
+            uuid = xcp.xapi.VM.get_uuid(objVMs[0])
+            xcp.DeleteVM(strVM)
+            xcp.messages("DEBUG", "VM: %s Deleted!" % strVM)
+            xcp.messages("DEBUG", "Delete rights for vm: %s" % strVM)
+            _res = xvp.DeleteRightsXVP(strUser, uuid)
             if not _res:
-                res.Messages.append("WARN: Rights for vm: %s on the user: %s Not deleted!!!" % (strVM, strUser,))
+                xcp.messages("WARN", "Rights for vm: %s on the user: %s Not deleted!!!" % (strVM, strUser,))
                 continue
-            if config['debug']:
-                res.Messages.append("DEBUG: Rights for VM: %s on the user: %s deleted!" % (strVM, strUser,))
+            xcp.messages("DEBUG", "Rights for VM: %s on the user: %s deleted!" % (strVM, strUser,))
 
 
     return
@@ -83,25 +95,30 @@ def CreateLab(configLab):
     res.Messages = []
     res.StatusOK = True
 
-    SQLConnect = _connectDB(res)
-    if not SQLConnect:
-        return
-    SQLCursor = SQLConnect.cursor()
-
-    xapi, resOK = _connectXCP(res)
+    xcp = XCPMethods(logging=res, conf=config)
+    resOK = xcp.ConnectXCP()
     if not resOK:
         return
+    xcp.ReadConfs()
+
+    xvp = XVPMethods(logging=res, conf=config)
+    xvp.ConnectDB()
+    if not xvp.SQLConnect:
+        return
+    xvp.sqlCur = xvp.SQLConnect.cursor()
 
 
     if configLab.Action.lower() == "create":
-        _createLab(xapi, SQLCursor, configLab, res)
+        _createLab(xcp, xvp, configLab)
     elif configLab.Action.lower() == "delete":
-        _deleteLab(xapi, SQLCursor, configLab, res)
+        _deleteLab(xcp, xvp, configLab)
     else:
         res.Messages.append("ERROR: Action is wrong!!! Action is 'create' or 'delete'")
         res.StatusOK = False
 
-    SQLConnect.commit()
+    xvp.SQLConnect.commit()
+    xvp.SQLConnect.close()
+    xcp.xapi.logout()
 
     return res
 
@@ -114,11 +131,12 @@ def GetNetworks():
     res.Status.StatusOK = True
 
 
-    xapi, resOK = _connectXCP(xcpconf.config, res.Status)
+    xcp = XCPMethods(logging=res.Status, conf=config)
+    resOK = xcp.ConnectXCP()
     if not resOK:
         return res
 
-    objs = _getNetworks(xapi)
+    objs = xcp.GetNetworks()
     if not objs:
         res.Status.StatusOK = False
         return res
@@ -126,7 +144,7 @@ def GetNetworks():
     for obj in objs:
         valueXCP = ValueXCP()
         valueXCP.Ref = obj
-        valueXCP.Value= xapi.network.get_name_label(obj)
+        valueXCP.Value= xcp.xapi.network.get_name_label(obj)
         res.Values.append(valueXCP)
 
     return res
@@ -138,11 +156,12 @@ def GetTemplates():
     res.Status.Messages = []
     res.Status.StatusOK = True
 
-    xapi, resOK = _connectXCP(xcpconf.config, res.Status)
+    xcp = XCPMethods(logging=res.Status, conf=config)
+    resOK = xcp.ConnectXCP()
     if not resOK:
         return res
 
-    objs = _getTemplates(xapi)
+    objs = xcp.GetTemplates()
     if not objs:
         res.Status.StatusOK = False
         return res
@@ -150,8 +169,68 @@ def GetTemplates():
     for obj in objs:
         valueXCP = ValueXCP()
         valueXCP.Ref = obj
-        valueXCP.Value= xapi.VM.get_name_label(obj)
+        valueXCP.Value= xcp.xapi.VM.get_name_label(obj)
         res.Values.append(valueXCP)
+
+    return res
+
+def GetAllVM():
+    res = ValuesXCP()
+    res.Status = StatusVLAB()
+    res.Values = []
+    res.Status.Messages = []
+    res.Status.StatusOK = True
+
+    xcp = XCPMethods(logging=res.Status, conf=config)
+    resOK = xcp.ConnectXCP()
+    if not resOK:
+        return res
+
+    objs = xcp.GetVMs()
+    if not objs:
+        res.Status.StatusOK = False
+        return res
+
+    for obj in objs:
+        valueXCP = ValueXCP()
+        valueXCP.Ref = xcp.xapi.VM.get_uuid(obj)
+        valueXCP.Value= xcp.xapi.VM.get_name_label(obj)
+        res.Values.append(valueXCP)
+
+    return res
+
+def GetStatusVM(uuid):
+    res = SingleValueXCP()
+    res.Status = StatusVLAB()
+    res.Status.Messages = []
+    res.Status.StatusOK = True
+
+    xcp = XCPMethods(logging=res.Status, conf=config)
+    resOK = xcp.ConnectXCP()
+    if not resOK:
+        return res
+
+    objs = xcp.GetStatusVM(uuid)
+    if not objs:
+        res.Status.StatusOK = False
+        return res
+
+    res.Values = objs
+
+    return res
+
+def ChangeStateVM(uuid, state):
+    res = StatusVLAB()
+    res.Messages = []
+    res.StatusOK = True
+
+    xcp = XCPMethods(logging=res, conf=config)
+    resOK = xcp.ConnectXCP()
+    if not resOK:
+        return res
+
+    if not xcp.ChangeStateVM(uuid, state):
+        res.StatusOK = False
 
     return res
 
@@ -162,9 +241,10 @@ def GetGroups():
     res.Status.Messages = []
     res.Status.StatusOK = True
 
-    _initAD(config['ldapHost'],config['ldapRoots'],res)
+    ad = LDAPMethods(logging=res.Status, conf=config)
+    ad.InitAD()
 
-    for obj in _getAdGroups():
+    for obj in ad.GetAdGroups():
         res.Values.append(obj)
 
     return res
@@ -176,10 +256,68 @@ def GetStudentsByGroup(group):
     res.Status.Messages = []
     res.Status.StatusOK = True
 
-    _initAD(config['ldapHost'],config['ldapRoots'],res)
+    ad = LDAPMethods(logging=res.Status, conf=config)
+    ad.InitAD()
 
-    for obj in _getAdUsers(group):
+    for obj in ad.GetAdUsers(group):
         res.Values.append(obj)
+
+    return res
+
+def GetUsersVM(uuid):
+    res = ValuesAD()
+    res.Status = StatusVLAB()
+    res.Values = []
+    res.Status.Messages = []
+    res.Status.StatusOK = True
+
+    xcp = XCPMethods(logging=res.Status, conf=config)
+    resOK = xcp.ConnectXCP()
+    if not resOK:
+        return res
+
+    xvp = XVPMethods(logging=res.Status, conf=config)
+    xvp.ConnectDB()
+    if not xvp.SQLConnect:
+        return
+    xvp.sqlCur = xvp.SQLConnect.cursor()
+
+    objs = xcp.GetGroupsByUUID(uuid)
+    if not objs:
+        res.Status.StatusOK = False
+        return res
+
+    pool = xcp.GetPoolName()
+
+    for obj in xvp.GetUsersByVMUUID(pool,uuid,objs):
+        res.Values.append(obj)
+
+    return res
+
+def GetVMsUsers(strUser):
+    res = ValuesXCP()
+    res.Status = StatusVLAB()
+    res.Values = []
+    res.Status.Messages = []
+    res.Status.StatusOK = True
+
+#TODO: Нада сделать
+
+#    xcp = XCPMethods(logging=res.Status, conf=config)
+#    resOK = xcp.ConnectXCP()
+#    if not resOK:
+#        return res
+#
+#    xvp = XVPMethods(logging=res.Status, conf=config)
+#    xvp.ConnectDB()
+#    if not xvp.SQLConnect:
+#        return
+#    xvp.sqlCur = xvp.SQLConnect.cursor()
+#
+#    pool = xcp.GetPoolName()
+#    uuids = xvp.GetVMUUIDByUser(pool,strUser)
+#    for obj in xcp.GetVMsByUUID(uuids):
+#        res.Values.append(obj)
 
     return res
 

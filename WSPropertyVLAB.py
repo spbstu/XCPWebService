@@ -13,24 +13,13 @@ class PropertyConf(ClassModel):
     Ref         = String
     Value       = String
 
-class VMConf(ClassModel):
-    __namespace__ = "http://devel.avalon.ru/VLABManager/vars"
-
-    Template    = PropertyConf
-    Folder      = String
-    Suffix      = String
-    Tags        = Array(String)
-    Networks    = Array(PropertyConf)
-
 
 class ConfigLab(ClassModel):
     __namespace__ = "http://devel.avalon.ru/VLABManager/vars"
 
     Action      = String
-    PoolName    = String
-    DomainKrb   = String
     Users       = Array(String)
-    VMs         = Array(VMConf)
+    NameLab     = String
 
 class ValueXCP(ClassModel):
     __namespace__ = "http://devel.avalon.ru/VLABManager/vars"
@@ -43,6 +32,12 @@ class ValuesXCP(ClassModel):
 
     Status      = StatusVLAB
     Values      = Array(ValueXCP)
+
+class SingleValueXCP(ClassModel):
+    __namespace__ = "http://devel.avalon.ru/VLABManager/vars"
+
+    Status      = StatusVLAB
+    Values      = String
 
 class ValuesAD(ClassModel):
     __namespace__ = "http://devel.avalon.ru/VLABManager/vars"
