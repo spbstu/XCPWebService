@@ -33,7 +33,7 @@ class LDAPMethods(BaseMethods):
 
     def GetAdGroups(self):
         listGroups = []
-        if not self.ldapInit():
+        if not self.ldapInit:
             return listGroups
         for ldapRoot in self.ldapRoots:
             ldapResult = self.ldapInit.search_s(ldapRoot,ldap.SCOPE_SUBTREE, '(objectClass=group)',['cn'])

@@ -174,6 +174,24 @@ def GetTemplates():
 
     return res
 
+def GetLabs():
+    res = ValuesXCP()
+    res.Status = StatusVLAB()
+    res.Values = []
+    res.Status.Messages = []
+    res.Status.StatusOK = True
+
+    xcp = XCPMethods(logging=res.Status, conf=config)
+    resOK = xcp.ConnectXCP()
+    if not resOK:
+        return res
+    xcp.ReadConfs()
+    for obj in xcp.GetLabs():
+        valueXCP = ValueXCP()
+        valueXCP.Value= obj
+        res.Values.append(valueXCP)
+    return res
+
 def GetAllVM():
     res = ValuesXCP()
     res.Status = StatusVLAB()

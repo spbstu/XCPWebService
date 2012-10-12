@@ -28,6 +28,7 @@ class XCPMethods(BaseMethods):
 
     def __init__(self, logging=None, conf=None):
         BaseMethods.__init__(self, logging, conf)
+        self.configsLabs = {}
         self._xapiOK = False
 
 
@@ -195,6 +196,9 @@ class XCPMethods(BaseMethods):
 
         return result
 
+    def GetLabs(self):
+        return [lab for lab in self.configsLabs]
+
     def CreateVM(self, strUser, vmName, nameLab):
 
         if vmName not in self.configsLabs[nameLab]['vms']:
@@ -251,12 +255,6 @@ class XCPMethods(BaseMethods):
         self.xapi.VM.provision(objVM)
 
         return objVM
-
-
-
-
-
-        return None
 
     def DeleteVM(self, strVM):
         objVM = self.FindVM(strVM)

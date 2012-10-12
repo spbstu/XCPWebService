@@ -15,6 +15,10 @@ class VLABManager(DefinitionBase):
         return CreateLab(config_lab)
 
     @soap(_returns=ValuesXCP)
+    def GetLabs(self):
+        return GetLabs()
+
+    @soap(_returns=ValuesXCP)
     def GetAllVM(self):
         return GetAllVM()
 
