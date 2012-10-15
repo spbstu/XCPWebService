@@ -319,23 +319,43 @@ def GetVMsUsers(strUser):
     res.Status.Messages = []
     res.Status.StatusOK = True
 
-#TODO: Нада сделать
+    xcp = XCPMethods(logging=res.Status, conf=config)
+    resOK = xcp.ConnectXCP()
+    if not resOK:
+        return res
 
-#    xcp = XCPMethods(logging=res.Status, conf=config)
-#    resOK = xcp.ConnectXCP()
-#    if not resOK:
-#        return res
-#
-#    xvp = XVPMethods(logging=res.Status, conf=config)
-#    xvp.ConnectDB()
-#    if not xvp.SQLConnect:
-#        return
-#    xvp.sqlCur = xvp.SQLConnect.cursor()
-#
-#    pool = xcp.GetPoolName()
-#    uuids = xvp.GetVMUUIDByUser(pool,strUser)
-#    for obj in xcp.GetVMsByUUID(uuids):
-#        res.Values.append(obj)
+    xvp = XVPMethods(logging=res.Status, conf=config)
+    xvp.ConnectDB()
+    if not xvp.SQLConnect:
+        return
+    xvp.sqlCur = xvp.SQLConnect.cursor()
+
+    pool = xcp.GetPoolName()
+    uuids = xvp.GetVMUUIDByUser(pool,strUser)
+    if len(uuids)>0:
+        if uuids[0] == '*':
+            return GetAllVM()
+
+    for obj in uuids:
+        vm = xcp.FindVMbyUUID(obj)
+
+        if not res.Status.StatusOK:
+            return res
+
+        if not vm:
+            continue
+
+        valueXCP = ValueXCP()
+        valueXCP.Ref = xcp.FindVMbyUUID(obj)
+        valueXCP.Value= xcp.xapi.VM.get_name_label(valueXCP.Ref)
+        res.Values.append(valueXCP)
+
+    for group in xvp.GetVMGroupByUser(pool,strUser):
+        for obj in xcp.GetVMByGroup(group):
+            valueXCP = ValueXCP()
+            valueXCP.Ref = obj
+            valueXCP.Value= xcp.xapi.VM.get_name_label(valueXCP.Ref)
+            res.Values.append(valueXCP)
 
     return res
 

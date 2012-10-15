@@ -150,6 +150,18 @@ class XVPMethods(BaseMethods):
         sqlCur = self.sqlCur
 
         sqlCur.execute("""
+            select count(*) from xvp_users
+            where username = %s
+            and (poolname = %s or poolname = '*')
+            and rights = 'all'
+            and groupname = '*'
+            and vmname = '*'""",(strUser, pool,))
+
+        if sqlCur.fetchall()[0][0]>0:
+            result.append('*')
+
+
+        sqlCur.execute("""
             select vmname from xvp_users
             where username = %s
             and poolname = %s
@@ -160,7 +172,39 @@ class XVPMethods(BaseMethods):
         for item in sqlCur.fetchall():
             result.append(item[0])
 
+        return result
 
+    def GetVMGroupByUser(self, pool, strUser):
+
+        result = []
+
+        sqlCur = self.sqlCur
+
+        sqlCur.execute("""
+            select count(*) from xvp_users
+            where username = %s
+            and (poolname = %s or poolname = '*')
+            and rights = 'all'
+            and groupname = '*'
+            and vmname = '*'""",(strUser, pool,))
+
+        if sqlCur.fetchall()[0][0]>0:
+            result.append('*')
+            return result
+
+
+        sqlCur.execute("""
+            select groupname from xvp_users
+            where username = %s
+            and poolname = %s
+            and rights = 'all'
+            and groupname != '*'
+            and vmname = '*'""",(strUser, pool,))
+
+        for item in sqlCur.fetchall():
+            result.append(item[0])
+
+        return result
 
     def ConnectDB(self):
 

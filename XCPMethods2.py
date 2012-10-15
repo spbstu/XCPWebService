@@ -178,13 +178,22 @@ class XCPMethods(BaseMethods):
         return self.xapi.VM.get_by_name_label(strVM)
 
     def FindVMbyUUID(self, uuid):
-        return self.xapi.VM.get_by_uuid(uuid)
+        try:
+            vm = self.xapi.VM.get_by_uuid(uuid)
+        except Exception, e:
+            if 'UUID_INVALID' in e.details[0]:
+                self.messages("WARN","Cannot find VM by UUID: %s" % uuid)
+                return False
+            else:
+                self.messages("ERROR","Cannot find VM by UUID: %s, error: %s " % (uuid,e,),True)
+                return False
+
+        return vm
 
     def GetGroupsByUUID(self, uuid):
 
         vm = self.FindVMbyUUID(uuid)
         if not vm:
-            self.messages("DEBUG","UUID VM '%s' not found" % uuid)
             return []
         tags = self.xapi.VM.get_tags(vm)
         if not tags:
@@ -193,6 +202,20 @@ class XCPMethods(BaseMethods):
         for tag in tags:
             if 'group' in tag:
                 result.append(tag.split(" ")[1])
+
+        return result
+
+    def GetVMByGroup(self, group):
+
+        result =[]
+
+        query = 'field "is_a_template" = "false" and field "is_a_snapshot" = "false"'
+        vms = self.xapi.VM.get_all_records_where(query)
+
+        for vm in vms:
+            for tag in vms[vm]['tags']:
+                if 'group' in tag and group in tag:
+                    result.append(vm)
 
         return result
 
