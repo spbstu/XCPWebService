@@ -2,13 +2,11 @@
 
 __author__ = 'artzab'
 from soaplib.core.service import DefinitionBase, soap
-from soaplib.core._base import ValidatingApplication
 
 from WSPropertyVLAB import *
 from VLABMethod import *
 
 class VLABManager(DefinitionBase):
-    __names__ = "Service.VLABManager"
     
     @soap(ConfigLab,_returns=StatusVLAB)
     def CreateLab(self,config_lab):
@@ -53,9 +51,3 @@ class VLABManager(DefinitionBase):
     @soap(String,_returns=ValuesAD)
     def GetStudentsByGroup(self, group):
         return GetStudentsByGroup(group)
-
-services = [
-    VLABManager,
-]
-
-application = ValidatingApplication(services, tns='http://devel.avalon.ru/')
