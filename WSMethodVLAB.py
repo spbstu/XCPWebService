@@ -51,3 +51,11 @@ class VLABManager(DefinitionBase):
     @soap(String,_returns=ValuesAD)
     def GetStudentsByGroup(self, group):
         return GetStudentsByGroup(group)
+
+    @soap(String,_returns=ValuesAD)
+    def GetStudentsByLab(self, lab):
+        return GetStudentsByLab(lab)
+
+    @soap(String,_returns=ValuesXCP)
+    def GetVMsByLab(self, lab):
+        return GetVMsByLab(lab)

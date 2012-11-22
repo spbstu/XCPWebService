@@ -346,18 +346,43 @@ def GetVMsUsers(strUser):
             continue
 
         valueXCP = ValueXCP()
-        valueXCP.Ref = xcp.FindVMbyUUID(obj)
-        valueXCP.Value= xcp.xapi.VM.get_name_label(valueXCP.Ref)
+        valueXCP.Ref = obj
+        valueXCP.Value= xcp.xapi.VM.get_name_label(vm)
         res.Values.append(valueXCP)
 
     for group in xvp.GetVMGroupByUser(pool,strUser):
         for obj in xcp.GetVMByGroup(group):
             valueXCP = ValueXCP()
-            valueXCP.Ref = obj
-            valueXCP.Value= xcp.xapi.VM.get_name_label(valueXCP.Ref)
+            valueXCP.Ref = xcp.xapi.VM.get_uuid(obj)
+            valueXCP.Value= xcp.xapi.VM.get_name_label(obj)
             res.Values.append(valueXCP)
 
     return res
+
+def GetVMsByLab(strLab):
+    res = ValuesXCP()
+    res.Status = StatusVLAB()
+    res.Values = []
+    res.Status.Messages = []
+    res.Status.StatusOK = True
+
+    xcp = XCPMethods(logging=res.Status, conf=config)
+    resOK = xcp.ConnectXCP()
+    if not resOK:
+        return res
+
+    xcp.ReadConfs()
+
+    for obj in xcp.GetVMsByLab(strLab):
+        valueXCP = ValueXCP()
+        valueXCP.Ref = xcp.xapi.VM.get_uuid(obj)
+        valueXCP.Value= xcp.xapi.VM.get_name_label(obj)
+        res.Values.append(valueXCP)
+
+    return res
+
+def GetStudentsByLab(strLab):
+    pass
 
 global config
 config = xcpconf.config

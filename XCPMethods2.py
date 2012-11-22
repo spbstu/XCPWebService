@@ -135,13 +135,13 @@ class XCPMethods(BaseMethods):
         return listTemplates
 
     def GetStatusVM(self, uuid):
-        objVMs = self.xapi.VM.get_all_records()
-        objVM = self.FindVMbyUUID(uuid)
-        if not objVM:
+        objVMs = self.xapi.VM.get_all_records_where('field "uuid" = "%s"' % uuid)
+        if not objVMs:
             self.messages("ERROR","VM: %s not found. VM not get status!" % uuid)
             return None
-        result = objVMs[objVM]["power_state"].lower()
-        return result
+        for objVM in objVMs:
+            result = objVMs[objVM]["power_state"].lower()
+            return result
 
     def ChangeStateVM(self, uuid, state):
 
@@ -156,7 +156,7 @@ class XCPMethods(BaseMethods):
         elif 'reboot' in state:
             self.xapi.VM.clean_reboot(objVM)
         elif 'start' in state:
-            self.xapi.VM.start(objVM)
+            self.xapi.VM.start(objVM, False, False)
         else:
             self.messages('ERROR', 'Wrong state to change, available next state: shutdown, reboot, start!!!')
             return False
@@ -299,6 +299,22 @@ class XCPMethods(BaseMethods):
                 self.xapi.VDI.destroy(record["VDI"])
         self.xapi.VM.destroy(objVM[0])
         return True
+
+    def GetVMsByLab(self, nameLab):
+
+        result =[]
+
+        if not nameLab in self.configsLabs:
+            self.logging.StatusOK = False
+            self.messages("ERROR","Lab %s not found in conf" % nameLab)
+            return result
+
+        for cfgVMkey in self.configsLabs[nameLab]['vms']:
+            objVMs = self.FindVM(cfgVMkey)
+            for objVM in objVMs:
+                result.append(objVM)
+
+        return result
 
 
 if __name__=='__main__':
