@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 __author__ = 'artzab'
-import logging
+import logging, os
 from soaplib.core.server import wsgi
 from WSMethodVLAB import VLABManager
 from subprocess import Popen, PIPE
@@ -9,6 +9,8 @@ import xcpconf
 from base64 import b64decode
 from soaplib import core
 import kerberos
+
+os.chdir(os.path.dirname(os.path.realpath(__file__)))
 
 class KerberosAuth:
     def __init__(self, wrapped, realm, service='HTTP'):
