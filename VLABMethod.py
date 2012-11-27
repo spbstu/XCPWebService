@@ -375,14 +375,38 @@ def GetVMsByLab(strLab):
 
     for obj in xcp.GetVMsByLab(strLab):
         valueXCP = ValueXCP()
-        valueXCP.Ref = xcp.xapi.VM.get_uuid(obj)
-        valueXCP.Value= xcp.xapi.VM.get_name_label(obj)
+        valueXCP.Ref = obj['uuid']
+        valueXCP.Value= obj['name_label']
         res.Values.append(valueXCP)
 
     return res
 
 def GetStudentsByLab(strLab):
-    pass
+    res = ValuesAD()
+    res.Status = StatusVLAB()
+    res.Values = []
+    res.Status.Messages = []
+    res.Status.StatusOK = True
+
+    xcp = XCPMethods(logging=res.Status, conf=config)
+    resOK = xcp.ConnectXCP()
+    if not resOK:
+        return res
+
+    xcp.ReadConfs()
+
+    xvp = XVPMethods(logging=res.Status, conf=config)
+    xvp.ConnectDB()
+    if not xvp.SQLConnect:
+        return
+    xvp.sqlCur = xvp.SQLConnect.cursor()
+    pool = xcp.GetPoolName()
+
+    for obj in xcp.GetVMsByLab(strLab):
+        for user in xvp.GetUsersByVMUUIDWithoutGroups(pool,obj['uuid']):
+            res.Values.append(user)
+
+    return res
 
 global config
 config = xcpconf.config

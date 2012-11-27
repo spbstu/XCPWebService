@@ -309,10 +309,13 @@ class XCPMethods(BaseMethods):
             self.messages("ERROR","Lab %s not found in conf" % nameLab)
             return result
 
-        for cfgVMkey in self.configsLabs[nameLab]['vms']:
-            objVMs = self.FindVM(cfgVMkey)
-            for objVM in objVMs:
-                result.append(objVM)
+        query = 'field "is_a_template" = "false" and field "is_a_snapshot" = "false"'
+        vms = self.xapi.VM.get_all_records_where(query)
+
+        for vm in vms:
+            for cfgVMkey in self.configsLabs[nameLab]['vms']:
+                if cfgVMkey.upper() in vms[vm]['name_label'].upper():
+                    result.append({'uuid': vms[vm]['uuid'], 'name_label': vms[vm]['name_label']})
 
         return result
 

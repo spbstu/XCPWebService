@@ -143,6 +143,24 @@ class XVPMethods(BaseMethods):
 
         return result
 
+    def GetUsersByVMUUIDWithoutGroups(self, pool, uuid):
+
+        result = []
+
+        sqlCur = self.sqlCur
+
+        #Find row by uuid
+        sqlCur.execute("""
+            select username from xvp_users
+            where vmname = %s
+            and poolname = %s
+            and rights = 'all'""", (uuid, pool,))
+
+        for item in sqlCur.fetchall():
+            result.append(item[0])
+
+        return result
+
     def GetVMUUIDByUser(self, pool, strUser):
 
         result = []
